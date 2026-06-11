@@ -1,7 +1,3 @@
-Here’s a polished **README.md** draft tailored to the project structure you shared. It’s professional, clear, and recruiter‑friendly:
-
----
-
 # AI-Powered Tech News Researcher
 
 An intelligent web application that curates, analyzes, and presents the latest technology news using AI-driven workflows. Built with **React + Vite**, the project emphasizes speed, modularity, and clean UI/UX design.
@@ -87,7 +83,3 @@ Contributions are welcome!
 - Fork the repo  
 - Create a feature branch  
 - Submit a pull request  
-
----
-
-Would you like me to make this README **portfolio-ready** (with recruiter‑friendly highlights like “Built for speed, modularity, and AI integration”) or more **developer‑focused** (with detailed instructions and technical notes)?
