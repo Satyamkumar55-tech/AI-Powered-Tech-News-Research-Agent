@@ -37,19 +37,78 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
     return true;
   };
 
+  const getRegisteredUsers = () => {
+    const users = localStorage.getItem('techpulse_registered_users');
+    const parsed = users ? JSON.parse(users) : [];
+    // Seed default user if registry is empty
+    if (parsed.length === 0) {
+      const defaultUser = {
+        name: 'Satyam Kumar',
+        email: 'developer@techpulse.ai',
+        password: 'password123'
+      };
+      localStorage.setItem('techpulse_registered_users', JSON.stringify([defaultUser]));
+      return [defaultUser];
+    }
+    return parsed;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!handleValidation()) return;
     
     setLoading(true);
+    setError('');
     
     // Simulate API authorization latency
     setTimeout(() => {
-      setLoading(false);
-      onLoginSuccess({
-        email: email,
-        name: mode === 'signup' ? name : email.split('@')[0]
-      });
+      const users = getRegisteredUsers();
+      const lowerEmail = email.trim().toLowerCase();
+
+      if (mode === 'signup') {
+        // Check if user already exists
+        const userExists = users.some(u => u.email.toLowerCase() === lowerEmail);
+        if (userExists) {
+          setError('An account with this email already exists. Please sign in instead.');
+          setLoading(false);
+          return;
+        }
+
+        // Add user
+        const newUser = {
+          name: name.trim(),
+          email: lowerEmail,
+          password: password
+        };
+        const updatedUsers = [...users, newUser];
+        localStorage.setItem('techpulse_registered_users', JSON.stringify(updatedUsers));
+        
+        setLoading(false);
+        onLoginSuccess({
+          email: newUser.email,
+          name: newUser.name
+        });
+      } else {
+        // Login mode
+        const matchedUser = users.find(u => u.email.toLowerCase() === lowerEmail);
+        if (!matchedUser) {
+          setError('This account does not exist. Please sign up first, or use test credentials: developer@techpulse.ai / password123');
+          setLoading(false);
+          return;
+        }
+
+        if (matchedUser.password !== password) {
+          setError('Incorrect password. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        setLoading(false);
+        onLoginSuccess({
+          email: matchedUser.email,
+          name: matchedUser.name
+        });
+      }
     }, 1200);
   };
 
@@ -57,9 +116,20 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
+      
+      // Personalize the Google login based on entered email if available, otherwise default to Satyam Kumar
+      let loginEmail = 'satyam.developer@gmail.com';
+      let loginName = 'Satyam Kumar';
+      
+      if (email.trim() && email.includes('@')) {
+        loginEmail = email.trim().toLowerCase();
+        const prefix = loginEmail.split('@')[0];
+        loginName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+      }
+
       onLoginSuccess({
-        email: 'developer.google@techpulse.ai',
-        name: 'Alex Developer'
+        email: loginEmail,
+        name: loginName
       });
     }, 1000);
   };
