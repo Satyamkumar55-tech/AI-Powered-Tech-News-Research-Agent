@@ -43,11 +43,7 @@ export default function App() {
   // Database States
   const [articles, setArticles] = useState(() => articleService.getArticles());
   const [reports, setReports] = useState(() => reportService.reports);
-  const [savedArticles, setSavedArticles] = useState(() => {
-    // Seed with two articles so the user has some default bookmarks to inspect
-    const allArts = articleService.getArticles();
-    return [allArts[0], allArts[2]];
-  });
+  const [savedArticles, setSavedArticles] = useState([]);
   const [notifications, setNotifications] = useState(initialNotifications);
 
   // Sync theme class with body element
