@@ -1,43 +1,59 @@
-import { initialReports } from '../data/reports';
+import apiClient from './apiClient';
+
+// reportService now fetches real persisted reports from the backend API.
 
 class ReportService {
-  constructor() {
-    this.reports = [...initialReports];
-  }
-
   async getLatestReport() {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    if (this.reports.length === 0) {
-      throw new Error("No reports available");
-    }
-
-    const latest = this.reports[0];
-    return this.formatReportAsMarkdown(latest);
+    return apiClient.getLatestReport();
   }
 
   async getAllReports() {
-    return this.reports;
+    return apiClient.getReports();
   }
 
+  async getReportById(id) {
+    return apiClient.getReportById(id);
+  }
+
+  // Format a report object as readable markdown (used for download/print)
   formatReportAsMarkdown(report) {
-    let md = `## Executive Summary\n${report.summary}\n\n`;
-    
-    md += `## Key Insights\n`;
-    report.insights.forEach(insight => {
-      md += `* ${insight}\n`;
-    });
-    md += `\n`;
+    if (!report) return '';
 
-    md += `## Actionable Takeaways\n`;
-    report.takeaways.forEach(takeaway => {
-      md += `* ${takeaway}\n`;
-    });
-    md += `\n`;
+    let md = `# ${report.title}\n`;
+    md += `**Generated:** ${new Date(report.generatedAt).toLocaleString()}\n\n`;
+    md += `---\n\n`;
 
-    md += `## Why It Matters\n${report.whyItMatters}\n`;
-    
+    md += `## Executive Summary\n${report.summary}\n\n`;
+
+    if (report.insights && report.insights.length > 0) {
+      md += `## Key Insights\n`;
+      report.insights.forEach((insight) => {
+        md += `* ${insight}\n`;
+      });
+      md += '\n';
+    }
+
+    if (report.takeaways && report.takeaways.length > 0) {
+      md += `## Actionable Takeaways\n`;
+      report.takeaways.forEach((takeaway) => {
+        md += `* ${takeaway}\n`;
+      });
+      md += '\n';
+    }
+
+    if (report.whyItMatters) {
+      md += `## Why It Matters\n${report.whyItMatters}\n\n`;
+    }
+
+    if (report.articles && report.articles.length > 0) {
+      md += `## Top Source Articles\n`;
+      report.articles.forEach((art, i) => {
+        md += `${i + 1}. **${art.title}** — *${art.source}* (Score: ${art.importanceScore}/10)\n`;
+        md += `   ${art.url}\n\n`;
+      });
+    }
+
+    md += `---\n*Generated automatically by TechPulse AI Research Platform.*\n`;
     return md;
   }
 }

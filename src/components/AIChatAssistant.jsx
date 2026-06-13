@@ -25,6 +25,17 @@ export default function AIChatAssistant({ articles }) {
   
   const chatEndRef = useRef(null);
 
+  // Initialize AI service with backend data when articles/reports change
+  useEffect(() => {
+    if (articles && articles.length > 0) {
+      aiService.setContext({
+        articles: articles || [],
+        reports: articles, // NOTE: This appears to be unused in aiService
+        analytics: null,
+      });
+    }
+  }, [articles]);
+
   // Auto scroll to bottom of messages
   useEffect(() => {
     if (chatEndRef.current) {

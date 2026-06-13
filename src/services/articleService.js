@@ -1,36 +1,41 @@
-import { initialArticles } from '../data/articles';
+import apiClient from './apiClient';
+
+// articleService now fetches real data from the backend API.
+// Keeps the same method signatures for full backward compatibility.
 
 class ArticleService {
-  constructor() {
-    this.articles = [...initialArticles];
+  async getArticles(limit = 100) {
+    return apiClient.getArticles(limit);
   }
 
-  getArticles() {
-    return this.articles;
+  async getTopArticles(limit = 3) {
+    return apiClient.getTopArticles(limit);
   }
 
-  getTopArticles(limit = 3) {
-    return [...this.articles]
-      .sort((a, b) => b.importanceScore - a.importanceScore)
-      .slice(0, limit);
+  async getArticlesByCategory(category, limit = 50) {
+    if (!category || category === 'All') {
+      return apiClient.getArticles(100);
+    }
+    return apiClient.getArticlesByCategory(category, limit);
   }
 
-  getArticlesByCategory(articlesList = this.articles) {
-    const counts = {};
-    articlesList.forEach(art => {
-      counts[art.category] = (counts[art.category] || 0) + 1;
-    });
-    return counts;
-  }
-
-  getArticleCount(articlesList = this.articles) {
+  // Utility helpers (operate on passed-in article arrays — same as before)
+  getArticleCount(articlesList = []) {
     return articlesList.length;
   }
 
-  getAvgImportanceScore(articlesList = this.articles) {
+  getAvgImportanceScore(articlesList = []) {
     if (articlesList.length === 0) return 0;
-    const total = articlesList.reduce((sum, art) => sum + art.importanceScore, 0);
+    const total = articlesList.reduce((sum, art) => sum + (art.importanceScore || 0), 0);
     return (total / articlesList.length).toFixed(1);
+  }
+
+  getArticlesByCategory_sync(articlesList = []) {
+    const counts = {};
+    articlesList.forEach((art) => {
+      counts[art.category] = (counts[art.category] || 0) + 1;
+    });
+    return counts;
   }
 }
 
