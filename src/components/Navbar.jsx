@@ -146,7 +146,13 @@ export default function Navbar({
           type="text"
           placeholder="Search articles, trends, keywords..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setSearchQuery(val);
+            if (val.trim() !== '' && activePage !== 'news-feed' && activePage !== 'saved') {
+              setActivePage('news-feed');
+            }
+          }}
           style={{
             width: '100%',
             padding: '0.55rem 1rem 0.55rem 2.25rem',
