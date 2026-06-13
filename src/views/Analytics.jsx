@@ -7,13 +7,13 @@ import {
   Sparkles,
   PieChart
 } from 'lucide-react';
-import { getArticlesByCategory } from '../data/mockData';
+import { articleService } from '../services/articleService';
 
 export default function Analytics({ articles, reports }) {
   const [activeTooltip, setActiveTooltip] = useState(null); // { chart, index, x, y, label, value }
 
   // Data processing: Articles by Category
-  const categoryCounts = getArticlesByCategory(articles);
+  const categoryCounts = articleService.getArticlesByCategory(articles);
   const categories = Object.keys(categoryCounts);
   const categoryValues = Object.values(categoryCounts);
   const maxCatVal = Math.max(...categoryValues, 1);

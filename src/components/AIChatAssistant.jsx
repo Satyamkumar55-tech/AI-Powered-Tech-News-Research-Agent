@@ -9,7 +9,7 @@ import {
   Bot,
   User 
 } from 'lucide-react';
-import { getAIResponse } from '../data/mockData';
+import { aiService } from '../services/aiService';
 
 export default function AIChatAssistant({ articles }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,7 +48,7 @@ export default function AIChatAssistant({ articles }) {
 
     // Simulate AI response delay
     setTimeout(() => {
-      const botReply = getAIResponse(text, articles);
+      const botReply = aiService.answerUserQuestion(text);
       const botMessage = {
         sender: 'bot',
         text: botReply,

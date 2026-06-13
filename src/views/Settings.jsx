@@ -33,15 +33,7 @@ export default function SettingsView({
   });
   const [preferredCats, setPreferredCats] = useState(['AI', 'Cybersecurity', 'Software Development']);
   
-  // Integration endpoints state
-  const [n8nWebhook, setN8nWebhook] = useState('https://n8n.internal.techpulse.ai/webhook/v1/sync');
-  const [openaiKey, setOpenaiKey] = useState('sk-proj-••••••••••••••••••••');
-  const [gSheetsUrl, setGSheetsUrl] = useState('https://docs.google.com/spreadsheets/d/1tPulseAI...');
-  const [gmailAddr, setGmailAddr] = useState('satyam.dev@gmail.com');
-  const [discordWebhook, setDiscordWebhook] = useState('https://discord.com/api/webhooks/9821...');
-  
-  const [syncing, setSyncing] = useState(false);
-  const [syncSuccess, setSyncSuccess] = useState(false);
+
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const categories = ['AI', 'Cybersecurity', 'Startups', 'Cloud Computing', 'Software Development'];
@@ -65,17 +57,7 @@ export default function SettingsView({
     setTimeout(() => setSaveSuccess(false), 2000);
   };
 
-  const handleTriggerSync = () => {
-    setSyncing(true);
-    setSyncSuccess(false);
-    
-    // Simulate n8n workflow execution latency
-    setTimeout(() => {
-      setSyncing(false);
-      setSyncSuccess(true);
-      setTimeout(() => setSyncSuccess(false), 3000);
-    }, 2000);
-  };
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -246,143 +228,7 @@ export default function SettingsView({
         </div>
       </div>
 
-      {/* Integrations Panel & Workflow sync */}
-      <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '14px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Link size={16} color="rgb(16, 185, 129)" />
-              SaaS Integrations (n8n / AI Backend Hookups)
-            </h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Simulated connections mapping to production automation pipelines.
-            </p>
-          </div>
 
-          <button
-            onClick={handleTriggerSync}
-            disabled={syncing}
-            className={`btn btn-sm ${syncSuccess ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ 
-              gap: '6px', 
-              backgroundColor: syncSuccess ? 'rgb(16, 185, 129)' : syncing ? 'rgba(255,255,255,0.05)' : 'var(--bg-card)',
-              color: syncSuccess ? '#fff' : 'var(--text-main)'
-            }}
-          >
-            <RefreshCw size={14} className={syncing ? 'sync-spinner' : ''} />
-            <span>{syncing ? 'Contacting n8n...' : syncSuccess ? 'Sync Completed!' : 'Run Workflow Sync'}</span>
-          </button>
-        </div>
-
-        {/* Sync Success notification */}
-        {syncSuccess && (
-          <div 
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              padding: '0.85rem 1.15rem',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              color: 'rgb(167, 243, 208)',
-              fontSize: '0.8rem',
-              animation: 'fadeIn 0.2s ease-out'
-            }}
-          >
-            <CheckCircle2 size={18} color="rgb(16, 185, 129)" />
-            <div>
-              <strong>Sync Connection Success:</strong> n8n trigger received status 200 OK. 12 RSS nodes parsed, OpenAI summary compiled, Google Sheets database updated, Discord/Gmail dispatches completed.
-            </div>
-          </div>
-        )}
-
-        {/* Inputs list */}
-        <div 
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '1rem'
-          }}
-        >
-          {/* n8n Webhook */}
-          <div className="form-group" style={{ margin: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <RefreshCw size={12} color="rgb(249, 115, 22)" />
-              n8n Webhook Endpoint
-            </label>
-            <input 
-              type="text" 
-              value={n8nWebhook}
-              onChange={(e) => setN8nWebhook(e.target.value)}
-              className="form-input" 
-              style={{ fontSize: '0.78rem' }}
-            />
-          </div>
-
-          {/* OpenAI Key */}
-          <div className="form-group" style={{ margin: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Cpu size={12} color="rgb(139, 92, 246)" />
-              OpenAI API Key
-            </label>
-            <input 
-              type="text" 
-              value={openaiKey}
-              onChange={(e) => setOpenaiKey(e.target.value)}
-              className="form-input" 
-              style={{ fontSize: '0.78rem' }}
-            />
-          </div>
-
-          {/* Google Sheets URL */}
-          <div className="form-group" style={{ margin: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Database size={12} color="rgb(16, 185, 129)" />
-              Google Sheets DB URI
-            </label>
-            <input 
-              type="text" 
-              value={gSheetsUrl}
-              onChange={(e) => setGSheetsUrl(e.target.value)}
-              className="form-input" 
-              style={{ fontSize: '0.78rem' }}
-            />
-          </div>
-
-          {/* Gmail Target */}
-          <div className="form-group" style={{ margin: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Mail size={12} color="rgb(59, 130, 246)" />
-              Gmail Alert Recipient
-            </label>
-            <input 
-              type="text" 
-              value={gmailAddr}
-              onChange={(e) => setGmailAddr(e.target.value)}
-              className="form-input" 
-              style={{ fontSize: '0.78rem' }}
-            />
-          </div>
-
-          {/* Discord Webhook */}
-          <div className="form-group" style={{ margin: 0 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <MessageSquare size={12} color="rgb(6, 182, 212)" />
-              Discord Webhook URI
-            </label>
-            <input 
-              type="text" 
-              value={discordWebhook}
-              onChange={(e) => setDiscordWebhook(e.target.value)}
-              className="form-input" 
-              style={{ fontSize: '0.78rem' }}
-            />
-          </div>
-        </div>
-
-      </div>
 
       <style>{`
         .sync-spinner {

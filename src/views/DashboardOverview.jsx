@@ -10,20 +10,16 @@ import {
   FolderCheck,
   ChevronRight
 } from 'lucide-react';
-import { 
-  getArticleCount, 
-  getAvgImportanceScore, 
-  getArticlesByCategory, 
-  trendingTopics 
-} from '../data/mockData';
+import { articleService } from '../services/articleService';
+import { trendingTopics } from '../data/categories';
 
 export default function DashboardOverview({ articles, reports, setActivePage }) {
-  const totalArticles = getArticleCount(articles);
-  const avgScore = getAvgImportanceScore(articles);
+  const totalArticles = articleService.getArticleCount(articles);
+  const avgScore = articleService.getAvgImportanceScore(articles);
   const reportsCount = reports.length;
   
   // Find top category today
-  const categoryCounts = getArticlesByCategory(articles);
+  const categoryCounts = articleService.getArticlesByCategory(articles);
   let topCategory = 'N/A';
   let topCount = 0;
   Object.keys(categoryCounts).forEach(cat => {

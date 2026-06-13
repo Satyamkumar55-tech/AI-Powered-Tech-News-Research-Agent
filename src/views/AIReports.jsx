@@ -10,7 +10,7 @@ import {
   RefreshCw,
   Loader
 } from 'lucide-react';
-import { fetchLatestReport } from '../services/api';
+import { reportService } from '../services/reportService';
 
 export default function AIReports() {
   const [reportContent, setReportContent] = useState('');
@@ -22,7 +22,7 @@ export default function AIReports() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchLatestReport();
+      const data = await reportService.getLatestReport();
       setReportContent(data);
     } catch (err) {
       setError(err.message || 'Failed to load report');

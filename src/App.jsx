@@ -16,11 +16,9 @@ import Analytics from './views/Analytics';
 import SettingsView from './views/Settings';
 
 // Import Mock Database
-import { 
-  initialArticles, 
-  initialReports, 
-  initialNotifications 
-} from './data/mockData';
+import { articleService } from './services/articleService';
+import { reportService } from './services/reportService';
+import { initialNotifications } from './data/notifications';
 
 export default function App() {
   // Authentication State (simulated)
@@ -43,11 +41,12 @@ export default function App() {
   });
 
   // Database States
-  const [articles, setArticles] = useState(initialArticles);
-  const [reports, setReports] = useState(initialReports);
+  const [articles, setArticles] = useState(() => articleService.getArticles());
+  const [reports, setReports] = useState(() => reportService.reports);
   const [savedArticles, setSavedArticles] = useState(() => {
     // Seed with two articles so the user has some default bookmarks to inspect
-    return [initialArticles[0], initialArticles[2]];
+    const allArts = articleService.getArticles();
+    return [allArts[0], allArts[2]];
   });
   const [notifications, setNotifications] = useState(initialNotifications);
 

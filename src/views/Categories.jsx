@@ -13,7 +13,7 @@ import {
   Eye,
   Bookmark
 } from 'lucide-react';
-import { getAvgImportanceScore } from '../data/mockData';
+import { articleService } from '../services/articleService';
 
 export default function Categories({ 
   articles, 
@@ -65,7 +65,7 @@ export default function Categories({
         {categoryConfigs.map((cat) => {
           const catArticles = getArticlesByCat(cat.name);
           const count = catArticles.length;
-          const avgScore = getAvgImportanceScore(catArticles);
+          const avgScore = articleService.getAvgImportanceScore(catArticles);
           const IconComponent = cat.icon;
           const isExpanded = expandedCategory === cat.name;
 
