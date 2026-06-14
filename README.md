@@ -182,20 +182,6 @@ TechPulse is designed for:
 
 ---
 
-## 📸 Screenshots
-
-Add screenshots of:
-
-* Dashboard Overview
-* Intelligence Feed
-* Research Reports
-* Analytics Dashboard
-* Research Assistant
-
-inside the `/screenshots` directory.
-
----
-
 ## 🔮 Future Enhancements
 
 * Real LLM integration (OpenAI/Gemini/Claude)
