@@ -73,11 +73,6 @@ AI-POWERED-TECH-NEWS-RESEARCHER/
 
 ---
 
-## 📸 Screenshots
-Add screenshots from the `screenshots/` folder here to showcase UI and features.
-
----
-
 ## 🤝 Contributing
 Contributions are welcome!  
 - Fork the repo  
