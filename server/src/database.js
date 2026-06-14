@@ -1,6 +1,6 @@
 'use strict';
 
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
 
@@ -12,152 +12,265 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-let db;
+let db = null;
+let SQL = null;
+
+async function initializeSQL() {
+  if (!SQL) {
+    SQL = await initSqlJs();
+  }
+  return SQL;
+}
+
+function saveDbToFile() {
+  if (db) {
+    const data = db.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(path.resolve(DB_PATH), buffer);
+  }
+}
 
 function getDb() {
   if (!db) {
-    db = new Database(path.resolve(DB_PATH));
-    db.pragma('journal_mode = WAL'); // Better concurrent read performance
-    db.pragma('foreign_keys = ON');
-    initSchema();
+    throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
   return db;
 }
 
+async function initializeDatabase() {
+  if (db) return db;
+  
+  await initializeSQL();
+  
+  const dbPath = path.resolve(DB_PATH);
+  let data;
+  
+  // Load existing database or create new one
+  if (fs.existsSync(dbPath)) {
+    data = fs.readFileSync(dbPath);
+    db = new SQL.Database(data);
+  } else {
+    db = new SQL.Database();
+  }
+  
+  initSchema();
+  saveDbToFile();
+  return db;
+}
+
 function initSchema() {
-  const database = db;
+  const database = getDb();
 
-  // Articles table
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS articles (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      source TEXT NOT NULL,
-      url TEXT UNIQUE NOT NULL,
-      category TEXT NOT NULL,
-      published_at TEXT NOT NULL,
-      summary TEXT,
-      content TEXT,
-      importance_score REAL DEFAULT 5.0,
-      author TEXT,
-      read_time TEXT,
-      why_it_matters TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-  `);
+  try {
+    // Articles table
+    database.run(`
+      CREATE TABLE IF NOT EXISTS articles (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        source TEXT NOT NULL,
+        url TEXT UNIQUE NOT NULL,
+        category TEXT NOT NULL,
+        published_at TEXT NOT NULL,
+        summary TEXT,
+        content TEXT,
+        importance_score REAL DEFAULT 5.0,
+        author TEXT,
+        read_time TEXT,
+        why_it_matters TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+    `);
 
-  // Reports table
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS reports (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      date TEXT NOT NULL,
-      generated_at TEXT NOT NULL,
-      summary TEXT,
-      insights TEXT,
-      takeaways TEXT,
-      why_it_matters TEXT,
-      article_ids TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-  `);
+    // Reports table
+    database.run(`
+      CREATE TABLE IF NOT EXISTS reports (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        date TEXT NOT NULL,
+        generated_at TEXT NOT NULL,
+        summary TEXT,
+        insights TEXT,
+        takeaways TEXT,
+        why_it_matters TEXT,
+        article_ids TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+    `);
 
-  // Report-Article junction (optional for querying)
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS report_articles (
-      report_id TEXT NOT NULL,
-      article_id TEXT NOT NULL,
-      PRIMARY KEY (report_id, article_id),
-      FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
-      FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
-    );
-  `);
+    // Report-Article junction (optional for querying)
+    database.run(`
+      CREATE TABLE IF NOT EXISTS report_articles (
+        report_id TEXT NOT NULL,
+        article_id TEXT NOT NULL,
+        PRIMARY KEY (report_id, article_id),
+        FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+        FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+      );
+    `);
 
-  // Analytics/stats table for quick lookups
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS analytics_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_type TEXT NOT NULL,
-      event_data TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
-  `);
+    // Analytics/stats table for quick lookups
+    database.run(`
+      CREATE TABLE IF NOT EXISTS analytics_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        event_data TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+    `);
 
-  console.log('[DB] Schema initialized successfully');
+    console.log('[DB] Schema initialized successfully');
+  } catch (err) {
+    // Table might already exist, silently continue
+    console.log('[DB] Schema tables may already exist:', err.message);
+  }
 }
 
 // ─── Article Operations ───────────────────────────────────────────────────────
 
 function insertArticle(article) {
   const db = getDb();
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO articles 
-      (id, title, source, url, category, published_at, summary, content, importance_score, author, read_time, why_it_matters)
-    VALUES 
-      (@id, @title, @source, @url, @category, @publishedAt, @summary, @content, @importanceScore, @author, @readTime, @whyItMatters)
-  `);
-  return stmt.run(article);
+  try {
+    db.run(`
+      INSERT OR IGNORE INTO articles 
+        (id, title, source, url, category, published_at, summary, content, importance_score, author, read_time, why_it_matters)
+      VALUES 
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      article.id,
+      article.title,
+      article.source,
+      article.url,
+      article.category,
+      article.publishedAt,
+      article.summary || '',
+      article.content || '',
+      article.importanceScore || 5.0,
+      article.author || '',
+      article.readTime || '',
+      article.whyItMatters || ''
+    ]);
+    saveDbToFile();
+    return { changes: 1 };
+  } catch (err) {
+    console.error('Error inserting article:', err);
+    return { changes: 0 };
+  }
 }
 
 function insertArticles(articles) {
   const db = getDb();
-  const insertMany = db.transaction((arts) => {
-    const stmt = db.prepare(`
-      INSERT OR IGNORE INTO articles 
-        (id, title, source, url, category, published_at, summary, content, importance_score, author, read_time, why_it_matters)
-      VALUES 
-        (@id, @title, @source, @url, @category, @publishedAt, @summary, @content, @importanceScore, @author, @readTime, @whyItMatters)
-    `);
-    let inserted = 0;
-    for (const art of arts) {
-      const result = stmt.run(art);
-      inserted += result.changes;
+  let inserted = 0;
+  try {
+    for (const art of articles) {
+      db.run(`
+        INSERT OR IGNORE INTO articles 
+          (id, title, source, url, category, published_at, summary, content, importance_score, author, read_time, why_it_matters)
+        VALUES 
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        art.id,
+        art.title,
+        art.source,
+        art.url,
+        art.category,
+        art.publishedAt,
+        art.summary || '',
+        art.content || '',
+        art.importanceScore || 5.0,
+        art.author || '',
+        art.readTime || '',
+        art.whyItMatters || ''
+      ]);
+      inserted++;
     }
-    return inserted;
-  });
-  return insertMany(articles);
+    saveDbToFile();
+  } catch (err) {
+    console.error('Error inserting articles:', err);
+  }
+  return inserted;
 }
 
 function getAllArticles({ limit = 100, offset = 0 } = {}) {
   const db = getDb();
-  const rows = db.prepare(`
+  const stmt = `
     SELECT * FROM articles 
     ORDER BY published_at DESC 
     LIMIT ? OFFSET ?
-  `).all(limit, offset);
-  return rows.map(rowToArticle);
+  `;
+  const results = db.exec(stmt, [limit, offset]);
+  if (results.length === 0) return [];
+  
+  const columns = results[0].columns;
+  return results[0].values.map(row => {
+    const obj = {};
+    columns.forEach((col, idx) => {
+      obj[col] = row[idx];
+    });
+    return rowToArticle(obj);
+  });
 }
 
 function getTopArticles(limit = 10) {
   const db = getDb();
-  const rows = db.prepare(`
+  const stmt = `
     SELECT * FROM articles 
     ORDER BY importance_score DESC, published_at DESC 
     LIMIT ?
-  `).all(limit);
-  return rows.map(rowToArticle);
+  `;
+  const results = db.exec(stmt, [limit]);
+  if (results.length === 0) return [];
+  
+  const columns = results[0].columns;
+  return results[0].values.map(row => {
+    const obj = {};
+    columns.forEach((col, idx) => {
+      obj[col] = row[idx];
+    });
+    return rowToArticle(obj);
+  });
 }
 
 function getArticlesByCategory(category, limit = 50) {
   const db = getDb();
-  const rows = db.prepare(`
+  const stmt = `
     SELECT * FROM articles 
     WHERE category = ?
     ORDER BY published_at DESC 
     LIMIT ?
-  `).all(category, limit);
-  return rows.map(rowToArticle);
+  `;
+  const results = db.exec(stmt, [category, limit]);
+  if (results.length === 0) return [];
+  
+  const columns = results[0].columns;
+  return results[0].values.map(row => {
+    const obj = {};
+    columns.forEach((col, idx) => {
+      obj[col] = row[idx];
+    });
+    return rowToArticle(obj);
+  });
 }
 
 function getArticleById(id) {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM articles WHERE id = ?').get(id);
-  return row ? rowToArticle(row) : null;
+  const stmt = 'SELECT * FROM articles WHERE id = ?';
+  const results = db.exec(stmt, [id]);
+  if (results.length === 0 || results[0].values.length === 0) return null;
+  
+  const columns = results[0].columns;
+  const row = results[0].values[0];
+  const obj = {};
+  columns.forEach((col, idx) => {
+    obj[col] = row[idx];
+  });
+  return rowToArticle(obj);
 }
 
 function getArticleCount() {
   const db = getDb();
-  return db.prepare('SELECT COUNT(*) as count FROM articles').get().count;
+  const results = db.exec('SELECT COUNT(*) as count FROM articles');
+  if (results.length === 0 || results[0].values.length === 0) return 0;
+  return results[0].values[0][0];
 }
 
 function rowToArticle(row) {
@@ -183,67 +296,100 @@ function rowToArticle(row) {
 
 function insertReport(report) {
   const db = getDb();
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO reports 
-      (id, title, date, generated_at, summary, insights, takeaways, why_it_matters, article_ids)
-    VALUES 
-      (@id, @title, @date, @generatedAt, @summary, @insights, @takeaways, @whyItMatters, @articleIds)
-  `);
+  try {
+    db.run(`
+      INSERT OR IGNORE INTO reports 
+        (id, title, date, generated_at, summary, insights, takeaways, why_it_matters, article_ids)
+      VALUES 
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      report.id,
+      report.title,
+      report.date,
+      report.generatedAt,
+      report.summary || '',
+      JSON.stringify(report.insights || []),
+      JSON.stringify(report.takeaways || []),
+      report.whyItMatters || '',
+      JSON.stringify(report.articleIds || [])
+    ]);
 
-  const row = {
-    ...report,
-    insights: JSON.stringify(report.insights || []),
-    takeaways: JSON.stringify(report.takeaways || []),
-    articleIds: JSON.stringify(report.articleIds || []),
-  };
-
-  const result = stmt.run(row);
-
-  // Insert report-article junctions
-  if (result.changes > 0 && report.articleIds && report.articleIds.length > 0) {
-    const junctionStmt = db.prepare(`
-      INSERT OR IGNORE INTO report_articles (report_id, article_id) VALUES (?, ?)
-    `);
-    const insertJunctions = db.transaction(() => {
+    // Insert report-article junctions
+    if (report.articleIds && report.articleIds.length > 0) {
       for (const artId of report.articleIds) {
-        junctionStmt.run(report.id, artId);
+        db.run(`
+          INSERT OR IGNORE INTO report_articles (report_id, article_id) VALUES (?, ?)
+        `, [report.id, artId]);
       }
-    });
-    insertJunctions();
+    }
+    
+    saveDbToFile();
+    return { changes: 1 };
+  } catch (err) {
+    console.error('Error inserting report:', err);
+    return { changes: 0 };
   }
-
-  return result;
 }
 
 function getAllReports({ limit = 50, offset = 0 } = {}) {
   const db = getDb();
-  const rows = db.prepare(`
+  const stmt = `
     SELECT * FROM reports 
     ORDER BY generated_at DESC 
     LIMIT ? OFFSET ?
-  `).all(limit, offset);
-  return rows.map(rowToReport);
+  `;
+  const results = db.exec(stmt, [limit, offset]);
+  if (results.length === 0) return [];
+  
+  const columns = results[0].columns;
+  return results[0].values.map(row => {
+    const obj = {};
+    columns.forEach((col, idx) => {
+      obj[col] = row[idx];
+    });
+    return rowToReport(obj);
+  });
 }
 
 function getLatestReport() {
   const db = getDb();
-  const row = db.prepare(`
+  const stmt = `
     SELECT * FROM reports 
     ORDER BY generated_at DESC 
     LIMIT 1
-  `).get();
-  return row ? rowToReport(row) : null;
+  `;
+  const results = db.exec(stmt);
+  if (results.length === 0 || results[0].values.length === 0) return null;
+  
+  const columns = results[0].columns;
+  const row = results[0].values[0];
+  const obj = {};
+  columns.forEach((col, idx) => {
+    obj[col] = row[idx];
+  });
+  return rowToReport(obj);
 }
 
 function getReportById(id) {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM reports WHERE id = ?').get(id);
-  return row ? rowToReport(row) : null;
+  const stmt = 'SELECT * FROM reports WHERE id = ?';
+  const results = db.exec(stmt, [id]);
+  if (results.length === 0 || results[0].values.length === 0) return null;
+  
+  const columns = results[0].columns;
+  const row = results[0].values[0];
+  const obj = {};
+  columns.forEach((col, idx) => {
+    obj[col] = row[idx];
+  });
+  return rowToReport(obj);
 }
 
 function getReportCount() {
   const db = getDb();
-  return db.prepare('SELECT COUNT(*) as count FROM reports').get().count;
+  const results = db.exec('SELECT COUNT(*) as count FROM reports');
+  if (results.length === 0 || results[0].values.length === 0) return 0;
+  return results[0].values[0][0];
 }
 
 function rowToReport(row) {
@@ -264,51 +410,71 @@ function rowToReport(row) {
 
 // ─── Analytics Operations ─────────────────────────────────────────────────────
 
-function getAnalytics() {
+function execQuery(sql, params = []) {
   const db = getDb();
+  try {
+    const results = db.exec(sql, params);
+    if (results.length === 0) return [];
+    
+    const columns = results[0].columns;
+    return results[0].values.map(row => {
+      const obj = {};
+      columns.forEach((col, idx) => {
+        obj[col] = row[idx];
+      });
+      return obj;
+    });
+  } catch (err) {
+    console.error('Query error:', err);
+    return [];
+  }
+}
 
+function getAnalytics() {
   // Category distribution
-  const categoryRows = db.prepare(`
+  const categoryRows = execQuery(`
     SELECT category, COUNT(*) as count 
     FROM articles 
     GROUP BY category 
     ORDER BY count DESC
-  `).all();
+  `);
 
   // Source distribution
-  const sourceRows = db.prepare(`
+  const sourceRows = execQuery(`
     SELECT source, COUNT(*) as count 
     FROM articles 
     GROUP BY source 
     ORDER BY count DESC
-  `).all();
+  `);
 
   // Average importance score
-  const avgScore = db.prepare(`
+  const avgScoreResult = execQuery(`
     SELECT AVG(importance_score) as avg FROM articles
-  `).get().avg || 0;
+  `);
+  const avgScore = avgScoreResult.length > 0 ? (avgScoreResult[0].avg || 0) : 0;
 
   // Top category
-  const topCategory = categoryRows[0] ? categoryRows[0].category : 'N/A';
+  const topCategory = categoryRows.length > 0 ? categoryRows[0].category : 'N/A';
 
   // Total counts
   const articleCount = getArticleCount();
   const reportCount = getReportCount();
 
   // Most important article
-  const topArticleRow = db.prepare(`
+  const topArticleRows = execQuery(`
     SELECT * FROM articles ORDER BY importance_score DESC LIMIT 1
-  `).get();
+  `);
+  const topArticleRow = topArticleRows.length > 0 ? topArticleRows[0] : null;
 
   // Recent report generation times (last 7 reports for trend data)
-  const recentReports = db.prepare(`
+  const recentReports = execQuery(`
     SELECT id, title, date, generated_at FROM reports 
     ORDER BY generated_at DESC 
     LIMIT 7
-  `).all();
+  `);
 
   // Score trend (last 7 days average score)
-  const scoreTrend = db.prepare(`
+  const scoreTrend = execQuery(`
     SELECT 
       date(published_at) as day,
       AVG(importance_score) as avg_score,
@@ -317,7 +483,7 @@ function getAnalytics() {
     WHERE published_at >= date('now', '-7 days')
     GROUP BY date(published_at)
     ORDER BY day ASC
-  `).all();
+  `);
 
   return {
     articleCount,
@@ -333,32 +499,32 @@ function getAnalytics() {
 }
 
 function getDashboardSummary() {
-  const db = getDb();
-
   const latestReport = getLatestReport();
   const articleCount = getArticleCount();
   const reportCount = getReportCount();
 
   // Category distribution
-  const categoryRows = db.prepare(`
+  const categoryRows = execQuery(`
     SELECT category, COUNT(*) as count 
     FROM articles 
     GROUP BY category 
     ORDER BY count DESC
-  `).all();
+  `);
 
-  const topCategory = categoryRows[0] ? categoryRows[0].category : 'N/A';
-  const topCategoryCount = categoryRows[0] ? categoryRows[0].count : 0;
+  const topCategory = categoryRows.length > 0 ? categoryRows[0].category : 'N/A';
+  const topCategoryCount = categoryRows.length > 0 ? categoryRows[0].count : 0;
 
   // Most important article overall
-  const topArticleRow = db.prepare(`
+  const topArticleRows = execQuery(`
     SELECT * FROM articles ORDER BY importance_score DESC LIMIT 1
-  `).get();
+  `);
+  const topArticleRow = topArticleRows.length > 0 ? topArticleRows[0] : null;
 
   // Avg score
-  const avgScore = db.prepare(`
+  const avgScoreResult = execQuery(`
     SELECT AVG(importance_score) as avg FROM articles
-  `).get().avg || 0;
+  `);
+  const avgScore = avgScoreResult.length > 0 ? (avgScoreResult[0].avg || 0) : 0;
 
   return {
     latestReportTime: latestReport ? latestReport.generatedAt : null,
@@ -376,6 +542,7 @@ function getDashboardSummary() {
 }
 
 module.exports = {
+  initializeDatabase,
   getDb,
   // Articles
   insertArticle,

@@ -88,23 +88,33 @@ app.use((err, req, res, next) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log('\n╔══════════════════════════════════════════════════════════╗');
-  console.log('║         TechPulse AI — Backend Server                   ║');
-  console.log('╠══════════════════════════════════════════════════════════╣');
-  console.log(`║  Server running on: http://localhost:${PORT}              ║`);
-  console.log(`║  Schedule: ${(process.env.REPORT_GENERATION_SCHEDULE || '0 * * * *').padEnd(46)}║`);
-  console.log(`║  Database: ${(process.env.DB_PATH || './data/techpulse.db').padEnd(46)}║`);
-  console.log('╚══════════════════════════════════════════════════════════╝\n');
+async function startServer() {
+  try {
+    // Initialize database first (async operation)
+    await db.initializeDatabase();
+    console.log('[Startup] Database initialized');
 
-  // Initialize DB schema
-  db.getDb();
+    app.listen(PORT, () => {
+      console.log('\n╔══════════════════════════════════════════════════════════╗');
+      console.log('║         TechPulse AI — Backend Server                   ║');
+      console.log('╠══════════════════════════════════════════════════════════╣');
+      console.log(`║  Server running on: http://localhost:${PORT}              ║`);
+      console.log(`║  Schedule: ${(process.env.REPORT_GENERATION_SCHEDULE || '0 * * * *').padEnd(46)}║`);
+      console.log(`║  Database: ${(process.env.DB_PATH || './data/techpulse.db').padEnd(46)}║`);
+      console.log('╚══════════════════════════════════════════════════════════╝\n');
 
-  // Start the scheduler (will also generate initial report if DB is empty)
-  scheduler.start().catch((err) => {
-    console.error('[Startup] Scheduler failed to start:', err.message);
-  });
-});
+      // Start the scheduler (will also generate initial report if DB is empty)
+      scheduler.start().catch((err) => {
+        console.error('[Startup] Scheduler failed to start:', err.message);
+      });
+    });
+  } catch (err) {
+    console.error('[Startup] Failed to initialize database:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 // Graceful shutdown
 process.on('SIGINT', () => {
