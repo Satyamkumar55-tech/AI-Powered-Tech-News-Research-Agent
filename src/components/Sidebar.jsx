@@ -24,7 +24,7 @@ export default function Sidebar({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'news-feed', label: 'Intelligence Feed', icon: Newspaper },
     { id: 'situation-room', label: 'Situation Room', icon: Map },
-    { id: 'reports', label: 'AI Reports', icon: Sparkles },
+    { id: 'reports', label: 'Research Docs', icon: Sparkles },
     { id: 'saved', label: 'Saved Signals', icon: Bookmark, badge: savedCount > 0 ? savedCount : null },
     { id: 'analytics', label: 'Sector Networks', icon: BarChart2 },
     { id: 'settings', label: 'System Config', icon: Settings }
