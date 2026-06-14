@@ -216,6 +216,7 @@ export default function App() {
             backendLoading={backendLoading}
             backendOnline={backendOnline}
             onRefresh={loadBackendData}
+            user={user}
           />
         );
       case 'news-feed':

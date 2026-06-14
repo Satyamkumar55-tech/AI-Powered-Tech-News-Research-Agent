@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../services/apiClient';
 
-export default function DashboardOverview({ articles, reports, setActivePage, backendLoading, backendOnline, onRefresh }) {
+export default function DashboardOverview({ articles, reports, setActivePage, backendLoading, backendOnline, onRefresh, user }) {
   const [dashboardData, setDashboardData] = useState(null);
   const [dashLoading, setDashLoading] = useState(true);
 

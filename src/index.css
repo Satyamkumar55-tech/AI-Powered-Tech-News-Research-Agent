@@ -44,6 +44,31 @@
   --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Light Theme Variables */
+.light {
+  --bg-app: #f8f9fa;
+  --bg-sidebar: rgba(255, 255, 255, 0.95);
+  --bg-card: #ffffff;
+  --bg-card-hover: #f3f4f6;
+  --bg-input: rgba(0, 0, 0, 0.05);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color-hover: rgba(0, 229, 255, 0.6);
+  
+  --text-main: #1a1a1a;
+  --text-muted: #6b7280;
+  --text-inverse: #f8f9fa;
+  
+  --shadow-sm: 0 2px 8px -1px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 20px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 30px -4px rgba(0, 0, 0, 0.15);
+  --shadow-glow: 0 0 15px rgba(0, 229, 255, 0.2);
+  --shadow-glow-alert: 0 0 15px rgba(255, 93, 115, 0.2);
+  --shadow-glow-purple: 0 0 15px rgba(124, 77, 255, 0.2);
+
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.08);
+}
+
 /* Base Styles */
 * {
   box-sizing: border-box;
